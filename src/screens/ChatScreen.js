@@ -15,6 +15,9 @@ import messages from "../../assets/data/messages.json";
 import InputBox from "../components/InputBox";
 import { API, graphqlOperation } from "aws-amplify";
 import { getChatRoom } from "../graphql/queries";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+dayjs.extend(relativeTime);
 
 export default function ChatScreen() {
   const [chatRoom, setChatRoom] = useState(null);
@@ -23,9 +26,19 @@ export default function ChatScreen() {
   const chatroomID = route.params.id;
 
   useEffect(() => {
-    API.graphql(graphqlOperation(getChatRoom, { id: chatroomID })).then(
-      (result) => setChatRoom(result.data?.getChatRoom)
-    );
+    // API.graphql(graphqlOperation(getChatRoom, { id: chatroomID })).then(
+    //   (result) => setChatRoom(result.data?.getChatRoom)
+    // );
+    const getChatRoomMessagesAndSort = async () => {
+      const chatRoomResponse = await API.graphql(
+        graphqlOperation(getChatRoom, { id: chatroomID })
+      );
+      chatRoomResponse.data?.getChatRoom.Messages.items.sort(function (a, b) {
+        return dayjs(b.createdAt).unix() - dayjs(a.createdAt).unix();
+      });
+      setChatRoom(chatRoomResponse.data?.getChatRoom);
+    };
+    getChatRoomMessagesAndSort();
   }, []);
 
   useEffect(() => {
