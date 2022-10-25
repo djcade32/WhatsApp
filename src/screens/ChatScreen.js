@@ -4,22 +4,36 @@ import {
   StyleSheet,
   FlatList,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Message from "../components/Message";
 
 import bg from "../../assets/images/BG.png";
 import messages from "../../assets/data/messages.json";
 import InputBox from "../components/InputBox";
+import { API, graphqlOperation } from "aws-amplify";
+import { getChatRoom } from "../graphql/queries";
 
 export default function ChatScreen() {
+  const [chatRoom, setChatRoom] = useState(null);
   const route = useRoute();
   const navigation = useNavigation();
+  const chatroomID = route.params.id;
+
+  useEffect(() => {
+    API.graphql(graphqlOperation(getChatRoom, { id: chatroomID })).then(
+      (result) => setChatRoom(result.data?.getChatRoom)
+    );
+  }, []);
 
   useEffect(() => {
     navigation.setOptions({ title: route.params.name });
   }, [route.params.name]);
+  if (!chatRoom) {
+    return <ActivityIndicator />;
+  }
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -28,12 +42,12 @@ export default function ChatScreen() {
     >
       <ImageBackground source={bg} style={styles.bg}>
         <FlatList
-          data={messages}
+          data={chatRoom.Messages.items}
           renderItem={({ item }) => <Message message={item} />}
           style={styles.list}
           inverted
         />
-        <InputBox />
+        <InputBox chatroom={chatRoom} />
       </ImageBackground>
     </KeyboardAvoidingView>
   );

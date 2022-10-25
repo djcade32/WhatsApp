@@ -7,20 +7,21 @@ import { Auth } from "aws-amplify";
 import { useEffect, useState } from "react";
 
 function ChatListItem({ chat }) {
-  const [authUser, setAuthUser] = useState({});
+  const [user, setUser] = useState(null);
   const navigation = useNavigation();
   useEffect(() => {
     const fetchUser = async () => {
       const authUser = await Auth.currentAuthenticatedUser();
-      console.log("User: ", authUser.attributes.sub);
-      setAuthUser(authUser);
+
+      setUser(
+        chat.users.items[0].user.id === authUser.attributes.sub
+          ? chat.users.items[1].user
+          : chat.users.items[0].user
+      );
     };
     fetchUser();
   }, []);
-  const user =
-    chat.users.items[0].user.id === authUser.attributes.sub
-      ? chat.users.items[1].user
-      : chat.users.items[0].user;
+
   return (
     <Pressable
       style={styles.container}
@@ -40,11 +41,11 @@ function ChatListItem({ chat }) {
             {user?.name}
           </Text>
           <Text style={styles.subTitle}>
-            {dayjs(chat.lastMessage?.createdAt).fromNow(true)}
+            {dayjs(chat.LastMessage?.createdAt).fromNow(true)}
           </Text>
         </View>
         <Text numberOfLines={2} style={styles.subTitle}>
-          {chat.lastMessage?.text}
+          {chat.LastMessage?.text}
         </Text>
       </View>
     </Pressable>

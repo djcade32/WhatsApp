@@ -5,11 +5,18 @@ import { createChatRoom, createUserChatRoom } from "../../graphql/mutations";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
+import { getCommonChatRoomWithUser } from "../../services/chatRoomService";
 
 function ContactListItem({ user }) {
   const navigation = useNavigation();
 
   async function onPress() {
+    const existingChatRoom = await getCommonChatRoomWithUser(user.id);
+    if (existingChatRoom) {
+      navigation.navigate("Chat", { id: existingChatRoom.id });
+      return;
+    }
+
     const newChatRoomData = await API.graphql(
       graphqlOperation(createChatRoom, { input: {} })
     );
