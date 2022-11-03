@@ -14,32 +14,46 @@ import bg from "../../assets/images/BG.png";
 import messages from "../../assets/data/messages.json";
 import InputBox from "../components/InputBox";
 import { API, graphqlOperation } from "aws-amplify";
-import { getChatRoom } from "../graphql/queries";
+import { getChatRoom, listMessagesByChatRoom } from "../graphql/queries";
+import { onCreateMessage } from "../graphql/subscriptions";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 dayjs.extend(relativeTime);
 
 export default function ChatScreen() {
   const [chatRoom, setChatRoom] = useState(null);
+  const [messages, setMessages] = useState([]);
   const route = useRoute();
   const navigation = useNavigation();
   const chatroomID = route.params.id;
 
   useEffect(() => {
-    // API.graphql(graphqlOperation(getChatRoom, { id: chatroomID })).then(
-    //   (result) => setChatRoom(result.data?.getChatRoom)
-    // );
-    const getChatRoomMessagesAndSort = async () => {
-      const chatRoomResponse = await API.graphql(
-        graphqlOperation(getChatRoom, { id: chatroomID })
-      );
-      chatRoomResponse.data?.getChatRoom.Messages.items.sort(function (a, b) {
-        return dayjs(b.createdAt).unix() - dayjs(a.createdAt).unix();
-      });
-      setChatRoom(chatRoomResponse.data?.getChatRoom);
-    };
-    getChatRoomMessagesAndSort();
-  }, []);
+    API.graphql(graphqlOperation(getChatRoom, { id: chatroomID })).then(
+      (result) => setChatRoom(result.data?.getChatRoom)
+    );
+  }, [chatroomID]);
+
+  useEffect(() => {
+    API.graphql(
+      graphqlOperation(listMessagesByChatRoom, {
+        chatroomID,
+        sortDirection: "DESC",
+      })
+    ).then((result) => setMessages(result.data?.listMessagesByChatRoom?.items));
+
+    // Subscribe to messages
+    const subscription = API.graphql(
+      graphqlOperation(onCreateMessage, {
+        filter: { chatroomID: { eq: chatroomID } },
+      })
+    ).subscribe({
+      next: ({ value }) => {
+        setMessages((m) => [value.data.onCreateMessage, ...m]);
+      },
+      error: (err) => console.warn(err),
+    });
+    return () => subscription.unsubscribe();
+  }, [chatroomID]);
 
   useEffect(() => {
     navigation.setOptions({ title: route.params.name });
@@ -55,7 +69,7 @@ export default function ChatScreen() {
     >
       <ImageBackground source={bg} style={styles.bg}>
         <FlatList
-          data={chatRoom.Messages.items}
+          data={messages}
           renderItem={({ item }) => <Message message={item} />}
           style={styles.list}
           inverted

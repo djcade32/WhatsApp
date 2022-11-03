@@ -14,7 +14,11 @@ export default function ChatsScreen() {
       const response = await API.graphql(
         graphqlOperation(listChatRooms, { id: authUser.attributes.sub })
       );
-      setChatRooms(response.data.getUser.ChatRooms.items);
+      const rooms = response.data.getUser.ChatRooms.items;
+      const sortedRooms = rooms.sort((r1, r2) => {
+        new Date(r1.chatRoom.updatedAt) - new Date(r2.chatRoom.updatedAt);
+      });
+      setChatRooms(sortedRooms);
     };
     fetchChatRooms();
   }, []);
